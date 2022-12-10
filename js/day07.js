@@ -25,7 +25,6 @@ $ ls
 const output = ``;
 
 const outputArray = outputEx.split("\n");
-// console.log(outputArray);
 
 function parseCommands( output ) {
     let commandArr = new Array();
@@ -34,11 +33,7 @@ function parseCommands( output ) {
         if ( line.charAt(0) === "$" ) {
             commandPointer++;
             commandArr.push([line]);
-            // console.log({i});
-            // console.log(commandArr);
         } else {
-            // console.log(commandPointer);
-            // console.log(line);
             commandArr[commandPointer].push(line);
         }
     });
@@ -48,7 +43,6 @@ function parseCommands( output ) {
 let outputArrayParsed = parseCommands( outputArray );
 
 function parseOutput( output ) {
-    // let filesystem = { path: '/', children: []};
     let filesystem = ['/'];
 
     output.forEach((line, i) => {
@@ -89,8 +83,6 @@ function parseOutput( output ) {
                 if ( j > 1 ) {
                     // why is ls getting added
                     console.log({j});
-                    // console.log(filesystem);
-                    // console.log(filesystem[0]);
                     if ( cwd === "/") {
                         if (!filesystem.includes(line)) {
                             filesystem.push(line);
@@ -110,6 +102,21 @@ function parseOutput( output ) {
 }
 
 console.log(parseOutput(outputArrayParsed));
+
+let directorySizes = [];
+filesystem.forEach((item, i) => {
+    // get size of directory, add to array
+   // if file 
+   item = item.split(" ");
+//  directorySizes += parseInt(item[1]);
+});
+
+// find all values less than 100000
+
+// sum all values 
+let directorySum = "";
+
+console.log("solution for part one is " + directorySum);
 
 // [ {dir: a, } ]
 
