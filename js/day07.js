@@ -43,12 +43,13 @@ function parseCommands( output ) {
 let outputArrayParsed = parseCommands( outputArray );
 
 function parseOutput( output ) {
-    let filesystem = ['/'];
+    // let filesystem = ['/'];
+    let filesystem = {};
 
     output.forEach((line, i) => {
         console.log(i);
         let lineParse = line[0].split(" ");
-        let directoryPointer = 0;
+        let directoryPointer = 0; // this isn't really gonna do what i want it to 
         let cwd = "/";
 
         // change directory
