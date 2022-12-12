@@ -24,7 +24,7 @@ $ ls
 
 const output = ``;
 
-const outputArray = outputEx.split("\n");
+const outputArray = output.split("\n");
 
 function parseCommands( output ) {
     let commandArr = [];
@@ -44,7 +44,7 @@ let outputArrayParsed = parseCommands( outputArray );
 // console.log(outputArrayParsed);
 
 function parseOutput( output ) {
-    let filesystem = {"/": { "type": "dir"}};
+    let filesystem = {"/": { }};
     let cwd = "/";
     let directoryPointer = 'filesystem["/"]'; // this isn't really gonna do what i want it to 
     
@@ -99,98 +99,102 @@ function parseOutput( output ) {
 let filesystem = parseOutput(outputArrayParsed);
 console.log(filesystem);
 
-let directorySizes = {};
-
-function getSizes(obj, dir) {
+// Build array of sizes present in directory
+function getSizes(obj) {
     Object.keys(obj).forEach(file => {
         if ( obj[file].type === "file") {
-            if ( directorySizes[dir] ) {
-                directorySizes[dir].push(obj[file].size);
-            } else {
-                directorySizes[dir] = [];
-                directorySizes[dir].push(obj[file].size);
+            if (!obj.sizes) {
+                obj.sizes = [];
             }
+            obj.sizes.push(obj[file].size);
         } else if (obj[file].type === "dir") {
-            getSizes(obj[file], file);
+            getSizes(obj[file]);
         } else {
-            if ( directorySizes[dir] ) {
-                directorySizes[dir].push(0);
-            } else {
-                directorySizes[dir] = [];
-                directorySizes[dir].push(0);
+            if (!obj[file].sizes) {
+                obj[file].sizes = [];
             }
         }
     });
 }
-
 getSizes(filesystem["/"], 'root');
-console.log(directorySizes);
 
-let directorySubTotals = {};
-Object.keys(directorySizes).forEach(dir => {
-    let sum = directorySizes[dir].reduce((a, b) => a + b, 0);
-    directorySubTotals[dir] = sum;
-});
-console.log(directorySubTotals);
-
-let directoryTotals = {};
-function nestedDirs(obj, dir) {
+// Sum totals of current directory 
+function nestedDirs(obj) {
     Object.keys(obj).forEach(file => {
         if (obj[file].type === "dir") {
-            if ( directoryTotals[file] ) {
-                directoryTotals[file].push(directorySubTotals[file]);
-            } else {
-                directoryTotals[file] = [];
-                directoryTotals[file].push(directorySubTotals[file]);
+            if (!obj.sizeSubTotal) {
+                obj.sizeSubTotal = [];
             }
-            if ( directoryTotals[dir] ) {
-                // if (dir !== "root") {
-                    directoryTotals[dir].push(directorySubTotals[file]);
-                // }
-            } else {
-                directoryTotals[dir] = [];
-                directoryTotals[dir].push(directorySubTotals[file]);
+            if (obj.sizes) {
+                let sum = obj.sizes.reduce((a, b) => a + b, 0);
+                obj.sizeSubTotal = sum;
             }
-            if (!directoryTotals["root"].includes(directorySubTotals[file])) {
-                directoryTotals["root"].push(directorySubTotals[file]);
+            nestedDirs(obj[file]);
+        } else {
+            if (!obj.sizeSubTotal) {
+                obj.sizeSubTotal = [];
             }
-            // console.log(obj);
-            // console.log(file);
-            // console.log(directorySubTotals[file]);
-            nestedDirs(obj[file], file);
-        } else if ( dir === "root" ) {
-            // console.log(directoryTotals);
-            if ( directoryTotals[dir]) {
-                if (!directoryTotals[dir].includes(directorySubTotals[dir])) {
-                    // this never runs
-                    directoryTotals[dir].push(directorySubTotals[dir]);
-                }
-            } else {
-                directoryTotals[dir] = [directorySubTotals[dir]];
-                // if (!directoryTotals[dir].includes(directorySubTotals[dir])) {
-                //     directoryTotals[dir].push(directorySubTotals[dir]);
-                // }
+            if (obj.sizes) {
+                let sum = obj.sizes.reduce((a, b) => a + b, 0);
+                obj.sizeSubTotal = sum;
             }
         }
     });
 };
-nestedDirs(filesystem["/"], 'root');
-console.log(directoryTotals);
+nestedDirs(filesystem["/"]);
 
-let directoryTotalSums = {};
-Object.keys(directoryTotals).forEach(dir => {
-    let sum = directoryTotals[dir].reduce((a, b) => a + b, 0);
-    directoryTotalSums[dir] = sum;
-});
-console.log(directoryTotalSums);
-
-let smallDirs = [];
-Object.keys(directoryTotalSums).forEach(dir => {
-    if ( directoryTotalSums[dir] < 100000 ) {
-        smallDirs.push(directoryTotalSums[dir]);
+// Can ya tell I switched to AI here?
+// Sum totals of all nested content
+function addSizeTotal(obj) {
+    // base case: if the object doesn't have a sizeSubTotal property, return
+    if (!obj.hasOwnProperty("sizeSubTotal")) return;
+  
+    // initialize sizeTotal to 0
+    let sizeTotal = 0;
+  
+    // iterate over the object's properties
+    for (let prop in obj) {
+      // if the property is an object and has a "type" property with value "dir",
+      // recursively call the function on it and add its sizeTotal to sizeTotal
+      if (typeof obj[prop] === "object" && obj[prop].hasOwnProperty("type") && obj[prop].type === "dir") {
+        addSizeTotal(obj[prop]);
+        sizeTotal += obj[prop].sizeTotal;
+      }  
     }
-});
-console.log(smallDirs);
-let sum = smallDirs.reduce((a, b) => a + b, 0);
+  
+    // add sizeSubTotal to sizeTotal
+    sizeTotal += obj.sizeSubTotal;
+  
+    // add sizeTotal to the object
+    obj.sizeTotal = sizeTotal;
+  }
+addSizeTotal(filesystem["/"]);
 
+
+function findSizeTotalLessThan(obj, sizeTotalThreshold) {
+    // base case: if the object doesn't have a sizeTotal property, return
+    if (!obj.hasOwnProperty("sizeTotal")) return;
+    // console.log('foo');
+    // initialize sum to 0
+    let sum = 0;
+  
+    // if the object's sizeTotal is less than or equal to the sizeTotalThreshold and
+    // the object has a "type" property with value "dir", add its sizeTotal to sum
+    if (obj.sizeTotal <= sizeTotalThreshold && obj.hasOwnProperty("type") && obj.type === "dir") {
+        sum += parseInt(obj.sizeTotal);
+    }
+  
+    // iterate over the object's properties
+    for (let prop in obj) {
+      // if the property is an object, recursively call the function on it and add
+      // its return value to sum
+        sum += !isNaN(findSizeTotalLessThan(obj[prop], sizeTotalThreshold)) ? parseInt(findSizeTotalLessThan(obj[prop], sizeTotalThreshold)) : 0;
+    }
+  
+    // return the sum
+    return sum;
+}
+
+let sum = findSizeTotalLessThan(filesystem["/"], 100000);
 console.log("solution for part one is " + sum);
+
