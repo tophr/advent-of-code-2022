@@ -41,64 +41,51 @@ function parseCommands( output ) {
 }
 
 let outputArrayParsed = parseCommands( outputArray );
+// console.log(outputArrayParsed);
 
 function parseOutput( output ) {
-    // let filesystem = ['/'];
-    let filesystem = {"/"};
-
+    let filesystem = {"/": { "type": "dir"}};
+    let cwd = "/";
+    let directoryPointer = 'filesystem["/"]'; // this isn't really gonna do what i want it to 
+    
     output.forEach((line, i) => {
-        console.log(i);
         let lineParse = line[0].split(" ");
         let command = lineParse[1];
-        let cwd = "/";
-        let directoryPointer = filesystem["/"]; // this isn't really gonna do what i want it to 
 
         // change directory
         if ( command === "cd" ) {
-            let dir = dir;
+            let dir = lineParse[2];
             if ( dir === "/" ) {
                 cwd = "/";
-                directoryPointer = filesystem["/"];
+                directoryPointer = 'filesystem["/"]';
             } else if ( dir === ".." ) {
-                let str = directoryPointer.search(/.*\[(.*)$/);
-                directoryPointer = directoryPointer.substring(0, str);
-                cwd = str.replace(/[\[\]']+/g,'');
-                console.log({directoryPointer});
-                console.log({cwd});
-            } else {
-                // this isn't gonna work 
-                cwd = dir;
-                console.log('cd ' + cwd);
-                // do a search based on cwd to target array to make nested 
-                if ( cwd === "/") {
-                    console.log("nothin g right?");
-                    // if (!filesystem.includes(cwd)) {
-                    //     console.log('poot1');
-                    //     filesystem.push(cwd);
-                    // }
+                let str = directoryPointer.replace(/\[[^\[\]]*\]$/, ""); //directoryPointer.substring(0, str);
+                if ( str === "filesystem" ) {
+                    directoryPointer = 'filesystem["/"]';
                 } else {
-                    if (!filesystem[directoryPointer].includes(cwd)) {
-                        console.log('poot2 ' + directoryPointer);
-                        filesystem[directoryPointer].push(cwd);
-                    }
+                    directoryPointer = str;
+                }
+                let regex = /\[([^\[\]]*)\]$/;
+                cwd = regex.exec(directoryPointer)[1];
+            } else {
+                cwd = dir;
+                if ( cwd === "/") {
+                    // nothing 
+                } else {
+                    let ref = directoryPointer + '["' + dir + '"]';
+                    directoryPointer = ref;
                 }
             }
         // list files
         } else if ( command === "ls" ) {
-            console.log({i});
             for ( let j = 0; j < line.length; j++) {
-                
-                if ( j > 1 ) {
-                    // why is ls getting added
-                    console.log({j});
-                    if ( cwd === "/") {
-                        if (!filesystem.includes(line)) {
-                            filesystem.push(line);
-                        }
+                if ( j > 0 ) {
+                    let lineArr = line[j].split(" ");
+                    if ( lineArr[0] === "dir") {
+                        eval(directoryPointer + '["' + lineArr[1] +  '"] = {"type": "dir"}');
                     } else {
-                        if (!filesystem[directoryPointer].includes(line)) {
-                            filesystem[directoryPointer].push(line);
-                        }
+                        // eval(directoryPointer + '["' + lineArr[1] + '"] = ' + lineArr[0] + '');
+                        eval(directoryPointer + '["' + lineArr[1] + '"] = {"type": "file", "size": ' + lineArr[0] + '}');
                     }
                 }
             }
@@ -109,77 +96,101 @@ function parseOutput( output ) {
     return filesystem;
 }
 
-console.log(parseOutput(outputArrayParsed));
+let filesystem = parseOutput(outputArrayParsed);
+console.log(filesystem);
 
-let directorySizes = [];
-filesystem.forEach((item, i) => {
-    // get size of directory, add to array
-   // if file 
-   item = item.split(" ");
-//  directorySizes += parseInt(item[1]);
+let directorySizes = {};
+
+function getSizes(obj, dir) {
+    Object.keys(obj).forEach(file => {
+        if ( obj[file].type === "file") {
+            if ( directorySizes[dir] ) {
+                directorySizes[dir].push(obj[file].size);
+            } else {
+                directorySizes[dir] = [];
+                directorySizes[dir].push(obj[file].size);
+            }
+        } else if (obj[file].type === "dir") {
+            getSizes(obj[file], file);
+        } else {
+            if ( directorySizes[dir] ) {
+                directorySizes[dir].push(0);
+            } else {
+                directorySizes[dir] = [];
+                directorySizes[dir].push(0);
+            }
+        }
+    });
+}
+
+getSizes(filesystem["/"], 'root');
+console.log(directorySizes);
+
+let directorySubTotals = {};
+Object.keys(directorySizes).forEach(dir => {
+    let sum = directorySizes[dir].reduce((a, b) => a + b, 0);
+    directorySubTotals[dir] = sum;
 });
+console.log(directorySubTotals);
 
-// find all values less than 100000
+let directoryTotals = {};
+function nestedDirs(obj, dir) {
+    Object.keys(obj).forEach(file => {
+        if (obj[file].type === "dir") {
+            if ( directoryTotals[file] ) {
+                directoryTotals[file].push(directorySubTotals[file]);
+            } else {
+                directoryTotals[file] = [];
+                directoryTotals[file].push(directorySubTotals[file]);
+            }
+            if ( directoryTotals[dir] ) {
+                // if (dir !== "root") {
+                    directoryTotals[dir].push(directorySubTotals[file]);
+                // }
+            } else {
+                directoryTotals[dir] = [];
+                directoryTotals[dir].push(directorySubTotals[file]);
+            }
+            if (!directoryTotals["root"].includes(directorySubTotals[file])) {
+                directoryTotals["root"].push(directorySubTotals[file]);
+            }
+            // console.log(obj);
+            // console.log(file);
+            // console.log(directorySubTotals[file]);
+            nestedDirs(obj[file], file);
+        } else if ( dir === "root" ) {
+            // console.log(directoryTotals);
+            if ( directoryTotals[dir]) {
+                if (!directoryTotals[dir].includes(directorySubTotals[dir])) {
+                    // this never runs
+                    directoryTotals[dir].push(directorySubTotals[dir]);
+                }
+            } else {
+                directoryTotals[dir] = [directorySubTotals[dir]];
+                // if (!directoryTotals[dir].includes(directorySubTotals[dir])) {
+                //     directoryTotals[dir].push(directorySubTotals[dir]);
+                // }
+            }
+        }
+    });
+};
+nestedDirs(filesystem["/"], 'root');
+console.log(directoryTotals);
 
-// sum all values 
-let directorySum = "";
+let directoryTotalSums = {};
+Object.keys(directoryTotals).forEach(dir => {
+    let sum = directoryTotals[dir].reduce((a, b) => a + b, 0);
+    directoryTotalSums[dir] = sum;
+});
+console.log(directoryTotalSums);
 
-console.log("solution for part one is " + directorySum);
+let smallDirs = [];
+Object.keys(directoryTotalSums).forEach(dir => {
+    if ( directoryTotalSums[dir] < 100000 ) {
+        smallDirs.push(directoryTotalSums[dir]);
+    }
+});
+console.log(smallDirs);
+let sum = smallDirs.reduce((a, b) => a + b, 0);
 
-// [ {dir: a, } ]
-
-// - / (dir)
-//   - a (dir)
-//     - e (dir)
-//       - i (file, size=584)
-//     - f (file, size=29116)
-//     - g (file, size=2557)
-//     - h.lst (file, size=62596)
-//   - b.txt (file, size=14848514)
-//   - c.dat (file, size=8504156)
-//   - d (dir)
-//     - j (file, size=4060174)
-//     - d.log (file, size=8033020)
-//     - d.ext (file, size=5626152)
-//     - k (file, size=7214296)
-
-// const TreeNode = {
-//     path: 'test/fixtures',
-//     children: [
-//       TreeNode {
-//         path: 'test/fixtures/example.js',
-//         children: []
-//       },
-//       TreeNode {
-//         path: 'test/fixtures/utils',
-//         children: [Array]
-//       }
-//     ]
-//   }
-
-//   const home = {
-//     path: '/',
-//     children: [
-//         { 
-//             name: 'b.text',
-//             size: 13333,
-//         }, 
-//         {
-//             name: 'c.dat',
-//             size: 34444
-//         },
-//         {
-//             path: 'd',
-//             children: [
-//                 { 
-//                     name: 'b.text',
-//                     size: 13333,
-//                 }, 
-//                 {
-//                     name: 'c.dat',
-//                     size: 34444
-//                 }
-//             ]
-//         }
-//     ]
-//   }
+console.log("solution for part one is " + sum);
