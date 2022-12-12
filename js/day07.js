@@ -27,7 +27,7 @@ const output = ``;
 const outputArray = outputEx.split("\n");
 
 function parseCommands( output ) {
-    let commandArr = new Array();
+    let commandArr = [];
     let commandPointer = -1;
     output.forEach((line, i) => {
         if ( line.charAt(0) === "$" ) {
@@ -44,31 +44,38 @@ let outputArrayParsed = parseCommands( outputArray );
 
 function parseOutput( output ) {
     // let filesystem = ['/'];
-    let filesystem = {};
+    let filesystem = {"/"};
 
     output.forEach((line, i) => {
         console.log(i);
         let lineParse = line[0].split(" ");
-        let directoryPointer = 0; // this isn't really gonna do what i want it to 
+        let command = lineParse[1];
         let cwd = "/";
+        let directoryPointer = filesystem["/"]; // this isn't really gonna do what i want it to 
 
         // change directory
-        if ( lineParse[1] === "cd" ) {
-            if ( lineParse[2] === "/" ) {
-                directoryPointer = 0;
+        if ( command === "cd" ) {
+            let dir = dir;
+            if ( dir === "/" ) {
                 cwd = "/";
-            } else if ( lineParse[2] === ".." ) {
-                directoryPointer = directoryPointer - 1;
+                directoryPointer = filesystem["/"];
+            } else if ( dir === ".." ) {
+                let str = directoryPointer.search(/.*\[(.*)$/);
+                directoryPointer = directoryPointer.substring(0, str);
+                cwd = str.replace(/[\[\]']+/g,'');
+                console.log({directoryPointer});
+                console.log({cwd});
             } else {
                 // this isn't gonna work 
-                cwd = lineParse[2];
-                console.log('plot ' + cwd);
+                cwd = dir;
+                console.log('cd ' + cwd);
                 // do a search based on cwd to target array to make nested 
-                if ( cwd === "/" || directoryPointer === 0) {
-                    if (!filesystem.includes(cwd)) {
-                        console.log('poot1');
-                        filesystem.push(cwd);
-                    }
+                if ( cwd === "/") {
+                    console.log("nothin g right?");
+                    // if (!filesystem.includes(cwd)) {
+                    //     console.log('poot1');
+                    //     filesystem.push(cwd);
+                    // }
                 } else {
                     if (!filesystem[directoryPointer].includes(cwd)) {
                         console.log('poot2 ' + directoryPointer);
@@ -77,7 +84,7 @@ function parseOutput( output ) {
                 }
             }
         // list files
-        } else if ( lineParse[1] === "ls" ) {
+        } else if ( command === "ls" ) {
             console.log({i});
             for ( let j = 0; j < line.length; j++) {
                 
