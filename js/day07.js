@@ -44,7 +44,7 @@ let outputArrayParsed = parseCommands( outputArray );
 // console.log(outputArrayParsed);
 
 function parseOutput( output ) {
-    let filesystem = {"/": { }};
+    let filesystem = {"/": { "type": "dir"}};
     let cwd = "/";
     let directoryPointer = 'filesystem["/"]'; // this isn't really gonna do what i want it to 
     
@@ -158,12 +158,12 @@ function addSizeTotal(obj) {
       // recursively call the function on it and add its sizeTotal to sizeTotal
       if (typeof obj[prop] === "object" && obj[prop].hasOwnProperty("type") && obj[prop].type === "dir") {
         addSizeTotal(obj[prop]);
-        sizeTotal += obj[prop].sizeTotal;
+        sizeTotal += !isNaN(obj[prop].sizeTotal) ? parseInt(obj[prop].sizeTotal) : 0;
       }  
     }
   
     // add sizeSubTotal to sizeTotal
-    sizeTotal += obj.sizeSubTotal;
+    sizeTotal += parseInt(obj.sizeSubTotal);
   
     // add sizeTotal to the object
     obj.sizeTotal = sizeTotal;
@@ -174,8 +174,6 @@ addSizeTotal(filesystem["/"]);
 function findSizeTotalLessThan(obj, sizeTotalThreshold) {
     // base case: if the object doesn't have a sizeTotal property, return
     if (!obj.hasOwnProperty("sizeTotal")) return;
-    // console.log('foo');
-    // initialize sum to 0
     let sum = 0;
   
     // if the object's sizeTotal is less than or equal to the sizeTotalThreshold and
@@ -198,3 +196,42 @@ function findSizeTotalLessThan(obj, sizeTotalThreshold) {
 let sum = findSizeTotalLessThan(filesystem["/"], 100000);
 console.log("solution for part one is " + sum);
 
+// Part Two 
+// Not working because total used must be wrong
+const diskSpace = 70_000_000;
+const reqUnused = 30_000_000;
+const totalUsed = filesystem["/"].sizeTotal;
+const totalFree = diskSpace - totalUsed;
+const reqDif = Math.abs(totalFree - reqUnused);
+console.log({totalUsed});
+console.log({totalFree});
+console.log({reqDif});
+let directorySizes = [];
+
+function findSizesTotalLessThan(obj, sizeTotalThreshold) {
+    // base case: if the object doesn't have a sizeTotal property, return
+    if (!obj.hasOwnProperty("sizeTotal")) return;
+  
+    // if the object's sizeTotal is less than or equal to the sizeTotalThreshold and
+    // the object has a "type" property with value "dir", add its sizeTotal to array
+    if (obj.sizeTotal <= sizeTotalThreshold && obj.hasOwnProperty("type") && obj.type === "dir") {
+        // console.log(parseInt(obj.sizeTotal));
+        directorySizes.push(parseInt(obj.sizeTotal));
+    }
+  
+    // iterate over the object's properties
+    for (let prop in obj) {
+      // if the property is an object, recursively call the function on it and add
+      // its return value to sum
+        let result = !isNaN(findSizesTotalLessThan(obj[prop], sizeTotalThreshold)) ? parseInt(findSizesTotalLessThan(obj[prop], sizeTotalThreshold)) : 0;
+        directorySizes.push(result);
+    }
+
+    return obj.sizeTotal;
+}
+
+findSizesTotalLessThan(filesystem["/"], reqDif);
+// console.log(directorySizes);
+let uniqueVals = [...new Set(directorySizes)];
+// console.log(uniqueVals);
+console.log("solution to part two is " + Math.max(...uniqueVals));
