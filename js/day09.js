@@ -7,9 +7,9 @@ D 1
 L 5
 R 2`;
 
-// const input = ``;
+const inputs = ``;
 
-const input = inputEx.split("\n");
+const input = inputs.split("\n");
 
 // initialize the head and tail positions
 let head_x = 0;
@@ -18,10 +18,11 @@ let tail_x = 0;
 let tail_y = 0;
 
 // initialize a dictionary to keep track of visited positions
-let visited = {};
+let head_visited = {"0, 0": true};
+let tail_visited = {"0, 0": true};
 
 // initialize a counter for the number of visited positions
-let num_visited = 0;
+let num_visited = 1;
 
 // loop through each movement in the input
 input.forEach((movement, i) => {
@@ -32,20 +33,34 @@ input.forEach((movement, i) => {
     let distance = parseInt(movement[1]);
     // console.log(movement);
     // move the head in the specified direction
-    if ( direction == "U") {
-        head_y += distance;
-    } else if ( direction == "D" ) {
-        head_y -= distance;
-    } else if ( direction == "L" ) {
-        head_x -= distance;
-    } else if ( direction == "R" ) {
-        head_x += distance;
-    }
+    for ( let i = 0; i < distance; i++) {
+        if ( direction == "U") {
+            head_y++; // += distance;
+        } else if ( direction == "D" ) {
+            head_y--; // -= distance;
+        } else if ( direction == "L" ) {
+            head_x-- // -= distance;
+        } else if ( direction == "R" ) {
+            head_x++ // += distance;
+        }
+    
 
     // don't think this is accounting for the diagonal rule 
     // update the tail position if necessary
     if ( Math.abs(head_x - tail_x) > 1 || Math.abs(head_y - tail_y) > 1 ) {
-        if ( head_x > tail_x ) {
+        if (( head_x > tail_x ) && ( head_y > tail_y )) {
+            tail_x += 1;
+            tail_y += 1;
+        } else if (( head_x < tail_x ) && ( head_y < tail_y )) {
+            tail_x -= 1;
+            tail_y -= 1;
+        } else if (( head_x < tail_x ) && ( head_y > tail_y )) {
+            tail_x -= 1;
+            tail_y += 1;
+        } else if (( head_x > tail_x ) && ( head_y < tail_y )) {
+            tail_x += 1;
+            tail_y -= 1;
+        } else if ( head_x > tail_x ) {
             tail_x += 1;
         } else if ( head_x < tail_x ) {
             tail_x -= 1;
@@ -57,13 +72,20 @@ input.forEach((movement, i) => {
     }
 
     // mark the current head position as visited
-    visited[(head_x, head_y)] = true;
-    num_visited += 1;
+    head_visited[`${head_x}, ${head_y}`] = true;
+    tail_visited[`${tail_x}, ${tail_y}`] = true;
 
     // return the number of visited positions
+    // console.log("head " + `${head_x}, ${head_y}`);
+    // console.log("tail " + `${tail_x}, ${tail_y}`);
+    num_visited += 1;
     // return num_visited;
-    console.log(head_x + head_y);
+
+    }
 });
 
-console.log(num_visited);
-console.log(visited);
+// console.log({num_visited});
+// console.log(head_visited);
+// console.log(tail_visited);
+// Return size of tail_visited 
+console.log("solution for part one is " + Object.keys(tail_visited).length);
